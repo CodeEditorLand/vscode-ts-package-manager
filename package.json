@@ -32,12 +32,12 @@
 		"prepublishOnly": "Build 'Source/**/*.ts'"
 	},
 	"dependencies": {
-		"node-maintainer": "^0.3.33"
+		"node-maintainer": "0.3.34"
 	},
 	"devDependencies": {
 		"@playform/build": "0.0.7",
 		"@playform/document": "0.0.6",
-		"@types/node": "^20.5.6"
+		"@types/node": "20.12.7"
 	},
 	"publishConfig": {
 		"access": "public"
