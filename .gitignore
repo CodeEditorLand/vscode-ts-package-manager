@@ -1,11 +1,8 @@
-.DS_Store
 .cache
-npm-debug.log
 Thumbs.db
 .build/
 /out*/
 build/node_modules
-yarn-error.log
 vscode.lsif
 vscode.db
 dist
