@@ -10,9 +10,9 @@
 		"compile": "tsc -p tsconfig.json"
 	},
 	"dependencies": {
-		"node-maintainer": "^0.3.34"
+		"node-maintainer": "0.3.34"
 	},
 	"devDependencies": {
-		"@types/node": "^20.14.8"
+		"@types/node": "20.14.5"
 	}
 }
