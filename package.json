@@ -13,6 +13,6 @@
 		"node-maintainer": "0.3.34"
 	},
 	"devDependencies": {
-		"@types/node": "20.14.11"
+		"@types/node": "20.5.6"
 	}
 }
