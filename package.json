@@ -1,18 +1,18 @@
 {
-	"dependencies": {
-		"node-maintainer": "^0.3.34"
-	},
-	"devDependencies": {
-		"@types/node": "^20.5.6"
-	},
+	"name": "@vscode/ts-package-manager",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"files": [
 		"dist/**/*.js",
 		"dist/**/*.d.ts"
 	],
-	"main": "dist/index.js",
-	"name": "@vscode/ts-package-manager",
 	"scripts": {
 		"compile": "tsc -p tsconfig.json"
 	},
-	"types": "dist/index.d.ts"
+	"dependencies": {
+		"node-maintainer": "0.3.34"
+	},
+	"devDependencies": {
+		"@types/node": "20.14.12"
+	}
 }
