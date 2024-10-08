@@ -2,16 +2,9 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { basename, dirname, isAbsolute, join } from "path";
-import {
-	Entry,
-	initSync,
-	Nassun,
-	NodeMaintainer,
-	Package,
-	resolveManifest,
-} from "node-maintainer";
-import nmWasm from "node-maintainer/node_maintainer_bg.wasm";
+import { basename, dirname, isAbsolute, join } from 'path';
+import { resolveManifest, initSync, Nassun, NodeMaintainer, Package, Entry } from 'node-maintainer';
+import nmWasm from 'node-maintainer/node_maintainer_bg.wasm';
 
 initSync(dataURItoUint8Array(nmWasm as unknown as string));
 
@@ -27,21 +20,15 @@ export interface InstallProjectOpts {
 }
 
 export enum PackageType {
-	Dependency = "dependencies",
-	DevDependency = "devDependencies",
-	OptionalDependency = "optionalDependencies",
-	PeerDependency = "peerDependencies",
+	Dependency = 'dependencies',
+	DevDependency = 'devDependencies',
+	OptionalDependency = 'optionalDependencies',
+	PeerDependency = 'peerDependencies',
 }
 
 // This is the subset of ts.server.System that we actually need.
 export interface FileSystem {
-	readDirectory(
-		path: string,
-		extensions?: readonly string[],
-		exclude?: readonly string[],
-		include?: readonly string[],
-		depth?: number,
-	): string[];
+	readDirectory(path: string, extensions?: readonly string[], exclude?: readonly string[], include?: readonly string[], depth?: number): string[];
 	deleteFile?(path: string): void;
 	createDirectory(path: string): void;
 	writeFile(path: string, data: string, writeByteOrderMark?: boolean): void;
@@ -58,11 +45,11 @@ interface MetaFile {
 export class PackageManager {
 	private readonly nassun: Nassun = new Nassun({});
 
-	constructor(private readonly fs: FileSystem) {}
+	constructor(private readonly fs: FileSystem) { }
 
 	async resolveProject(root: string, opts: InstallProjectOpts = {}) {
 		if (opts.addPackages || opts.removePackages) {
-			await this.updateJson(join(root, "package.json"), opts);
+			await this.updateJson(join(root, 'package.json'), opts);
 		}
 		console.time(`dependency resolution: ${root}`);
 		const maintainer = await this.resolveMaintainer(root, opts);
@@ -70,21 +57,14 @@ export class PackageManager {
 		return new ResolvedProject(this.fs, maintainer, root);
 	}
 
-	private async updateJson(
-		packageJsonPath: string,
-		opts: InstallProjectOpts = {},
-	) {
+	private async updateJson(packageJsonPath: string, opts: InstallProjectOpts = {}) {
 		const packageType = opts.packageType ?? PackageType.Dependency;
-		const corgis = await Promise.all(
-			(opts.addPackages ?? []).map(async (pkg) =>
-				this.nassun.corgiMetadata(pkg),
-			),
-		);
+		const corgis = await Promise.all((opts.addPackages ?? []).map(async pkg => this.nassun.corgiMetadata(pkg)));
 		let pkgJson;
 		try {
 			pkgJson = this.readJson(packageJsonPath);
 		} catch (e) {
-			console.error("failed to read package.json", e);
+			console.error('failed to read package.json', e);
 			pkgJson = {};
 		}
 
@@ -108,22 +88,11 @@ export class PackageManager {
 		this.fs.writeFile(packageJsonPath, stringified);
 	}
 
-	private async resolveMaintainer(
-		root: string,
-		opts: InstallProjectOpts,
-	): Promise<NodeMaintainer> {
-		const pkgJson =
-			opts.pkgJson ||
-			this.fs.readFile(join(root, "package.json")) ||
-			"{}";
-		const kdlPkgLock =
-			opts.kdlLock || this.fs.readFile(join(root, "package-lock.kdl"));
-		const npmPkgLock =
-			opts.npmLock || this.fs.readFile(join(root, "package-lock.json"));
-		return resolveManifest(JSON.parse(pkgJson.trim()), {
-			kdlLock: kdlPkgLock,
-			npmLock: npmPkgLock,
-		});
+	private async resolveMaintainer(root: string, opts: InstallProjectOpts): Promise<NodeMaintainer> {
+		const pkgJson = opts.pkgJson || this.fs.readFile(join(root, 'package.json')) || '{}';
+		const kdlPkgLock = opts.kdlLock || this.fs.readFile(join(root, 'package-lock.kdl'));
+		const npmPkgLock = opts.npmLock || this.fs.readFile(join(root, 'package-lock.json'));
+		return resolveManifest(JSON.parse(pkgJson.trim()), { kdlLock: kdlPkgLock, npmLock: npmPkgLock });
 	}
 
 	/**
@@ -134,7 +103,7 @@ export class PackageManager {
 	private readJson(path: string): any {
 		const data = this.fs.readFile(path);
 		if (!data) {
-			throw new Error("Failed to read file: " + path);
+			throw new Error('Failed to read file: ' + path);
 		}
 		return JSON.parse(data.trim());
 	}
@@ -144,13 +113,9 @@ export class ResolvedProject {
 	private readonly prefix: string;
 	private readonly metaPath: string;
 
-	constructor(
-		private readonly fs: FileSystem,
-		private readonly maintainer: NodeMaintainer,
-		private readonly root: string,
-	) {
-		this.prefix = join(root, "node_modules");
-		this.metaPath = join(this.prefix, ".meta.json");
+	constructor(private readonly fs: FileSystem, private readonly maintainer: NodeMaintainer, private readonly root: string) {
+		this.prefix = join(root, 'node_modules');
+		this.metaPath = join(this.prefix, '.meta.json');
 	}
 
 	/**
@@ -174,16 +139,14 @@ export class ResolvedProject {
 	async restorePackageAt(path: string): Promise<number | undefined> {
 		console.time(`restore package at: ${path}`);
 		this.checkPath(path);
-		const meta: MetaFile = JSON.parse(
-			this.fs.readFile(this.metaPath) || "{}",
-		);
+		const meta: MetaFile = JSON.parse(this.fs.readFile(this.metaPath) || '{}');
 		if (!meta.packages) {
 			meta.packages = {};
 		}
 		const projRoot = this.getProjectRoot(path);
 
 		if (!projRoot) {
-			console.error("root not found for ", path);
+			console.error('root not found for ', path);
 			console.timeEnd(`restore package at: ${path}`);
 			return;
 		}
@@ -191,17 +154,12 @@ export class ResolvedProject {
 		const pkgPath = packagePath(path);
 		const pkg = this.packageAtPath(path.slice(projRoot.length));
 		if (!pkg) {
-			console.error("no package at path", path, pkgPath);
+			console.error('no package at path', path, pkgPath);
 			console.timeEnd(`restore package at: ${path}`);
 			return;
 		}
 
-		if (
-			pkg &&
-			pkgPath &&
-			meta.packages?.[pkgPath.slice(this.prefix.length)]?.resolved ===
-				pkg.resolved
-		) {
+		if (pkg && pkgPath && meta.packages?.[pkgPath.slice(this.prefix.length)]?.resolved === pkg.resolved) {
 			// Already installed and synced. No need to do anything else!
 			console.timeEnd(`restore package at: ${path}`);
 			return;
@@ -217,10 +175,10 @@ export class ResolvedProject {
 			count = await this.extractPackageTo(pkg, pkgPath);
 			meta.packages[pkgPath.slice(this.prefix.length)] = {
 				name: pkg.name,
-				resolved: pkg.resolved,
+				resolved: pkg.resolved
 			};
 		} catch (e) {
-			console.error("error extracting: ", e);
+			console.error('error extracting: ', e);
 			console.timeEnd(`restore package at: ${path}`);
 			throw e;
 		} finally {
@@ -239,7 +197,7 @@ export class ResolvedProject {
 	 * @returns
 	 */
 	pruneExtraneous(): number {
-		const meta = JSON.parse(this.fs.readFile(this.metaPath) || "{}");
+		const meta = JSON.parse(this.fs.readFile(this.metaPath) || '{}');
 		let count = 0;
 
 		if (!this.fs.directoryExists(this.prefix)) {
@@ -257,11 +215,7 @@ export class ResolvedProject {
 				const subPath = pkgPath.slice(this.prefix.length);
 				const pkg = this.packageAtPath(subPath);
 				try {
-					if (
-						pkg &&
-						meta.packages?.[pkgPath.slice(this.prefix.length)]
-							?.resolved === pkg.resolved
-					) {
+					if (pkg && meta.packages?.[pkgPath.slice(this.prefix.length)]?.resolved === pkg.resolved) {
 						// There's a valid package here. Move along.
 					} else {
 						// Extraneous!
@@ -295,16 +249,13 @@ export class ResolvedProject {
 		}
 	}
 
-	private async extractPackageTo(
-		pkg: Package,
-		pkgPath: string,
-	): Promise<number | undefined> {
+	private async extractPackageTo(pkg: Package, pkgPath: string): Promise<number | undefined> {
 		const mkdirCache = new Set<string>();
 		mkdirp(mkdirCache, this.fs, pkgPath);
 		// Clean up the directory, in case it already exists, but leave
 		// node_modules alone to avoid clobbering other packages.
 		for (const file of this.fs.readDirectory(pkgPath)) {
-			if (basename(file) === "node_modules") {
+			if (basename(file) === 'node_modules') {
 				continue;
 			}
 			rimraf(this.fs, file);
@@ -319,10 +270,7 @@ export class ResolvedProject {
 			}
 
 			// Strip the first level of a package, just like NPM does.
-			const entryPath = join(
-				pkgPath,
-				entry.path.replace(/^([^/]*\/)?/, ""),
-			);
+			const entryPath = join(pkgPath, entry.path.replace(/^([^/]*\/)?/, ''));
 
 			// We simulate directories based on files we find.
 			mkdirp(mkdirCache, this.fs, dirname(entryPath));
@@ -337,10 +285,7 @@ export class ResolvedProject {
 				await drainStream(entry.contents);
 			} else if (entry.type === 0 || entry.type === 48) {
 				// '0' == 48 or '\x00' == 0 == regular file
-				const data = await streamToArrayBuffer(
-					entry.contents,
-					entry.size,
-				);
+				const data = await streamToArrayBuffer(entry.contents, entry.size);
 				this.fs.writeFile(entryPath, decoder.decode(data));
 				fileCount++;
 			} else {
@@ -356,32 +301,28 @@ export class ResolvedProject {
 
 	private async extractMissing() {
 		const meta: MetaFile = { packages: {} };
-		await this.maintainer.forEachPackage(
-			async (pkg: Package, path: string) => {
-				const fullPath = join(this.prefix, path);
-				meta.packages![path] = {
-					name: pkg.name,
-					resolved: pkg.resolved,
-				};
-				try {
-					if (!this.fs.directoryExists(fullPath)) {
-						await this.extractPackageTo(pkg, fullPath);
-					}
-				} finally {
-					pkg.free();
+		await this.maintainer.forEachPackage(async (pkg: Package, path: string) => {
+			const fullPath = join(this.prefix, path);
+			meta.packages![path] = {
+				name: pkg.name,
+				resolved: pkg.resolved
+			};
+			try {
+				if (!this.fs.directoryExists(fullPath)) {
+					await this.extractPackageTo(pkg, fullPath);
 				}
-			},
-		);
+			} finally {
+				pkg.free();
+			}
+		});
 		rimraf(this.fs, this.metaPath);
 		this.fs.writeFile(this.metaPath, JSON.stringify(meta, null, 2));
 	}
 
 	private writeLockfile() {
-		this.fs.writeFile(
-			join(this.root, "package-lock.kdl"),
-			this.maintainer.toKdl(),
-		);
+		this.fs.writeFile(join(this.root, 'package-lock.kdl'), this.maintainer.toKdl());
 	}
+
 }
 
 //---- Utils
@@ -393,15 +334,12 @@ export class ResolvedProject {
  * @returns the subpath of the package itself
  */
 export function packagePath(path: string): string {
-	return path.replace(
-		/(^.*\/node_modules\/(?:@[^/]+\/)?[^/]+)\/?(?!node_modules\/).*/,
-		"$1",
-	);
+	return path.replace(/(^.*\/node_modules\/(?:@[^/]+\/)?[^/]+)\/?(?!node_modules\/).*/, '$1');
 }
 
 // via https://stackoverflow.com/questions/12168909/blob-from-dataurl
 function dataURItoUint8Array(dataURI: string) {
-	const byteString = atob(dataURI.split(",")[1]);
+	const byteString = atob(dataURI.split(',')[1]);
 	const ab = new ArrayBuffer(byteString.length);
 	const ia = new Uint8Array(ab);
 	for (let i = 0; i < byteString.length; i++) {
@@ -412,8 +350,7 @@ function dataURItoUint8Array(dataURI: string) {
 
 async function drainStream(stream: ReadableStream<Uint8Array>): Promise<void> {
 	const reader = stream.getReader();
-	while (true) {
-		// eslint-disable-line no-constant-condition
+	while (true) { // eslint-disable-line no-constant-condition
 		const { done } = await reader.read();
 		if (done) {
 			break;
@@ -422,15 +359,11 @@ async function drainStream(stream: ReadableStream<Uint8Array>): Promise<void> {
 	return reader.closed;
 }
 
-async function streamToArrayBuffer(
-	stream: ReadableStream<Uint8Array>,
-	length: number,
-): Promise<Uint8Array> {
+async function streamToArrayBuffer(stream: ReadableStream<Uint8Array>, length: number): Promise<Uint8Array> {
 	const result = new Uint8Array(length);
 	const reader = stream.getReader();
 	let idx = 0;
-	while (true) {
-		// eslint-disable-line no-constant-condition
+	while (true) { // eslint-disable-line no-constant-condition
 		const { done, value } = await reader.read();
 		if (done) {
 			break;
@@ -447,31 +380,26 @@ function* walkDir(fs: FileSystem, path: string) {
 		const entry = contents.shift()!;
 		const entryPath = join(path, entry);
 		if (fs.directoryExists(entryPath)) {
-			contents = fs
-				.readDirectory(entryPath)
-				.map((e) => join(entry, e))
-				.concat(contents);
+			contents = fs.readDirectory(entryPath).map(e => join(entry, e)).concat(contents);
 		}
 		yield entryPath;
 	}
 }
 
 function mkdirp(cache: Set<string>, fs: FileSystem, path: string) {
-	path.split("/").reduce((dir: string, next: string) => {
+	path.split('/').reduce((dir: string, next: string) => {
 		const joined = join(dir, next);
 		if (!cache.has(joined) && !fs.directoryExists(joined)) {
 			fs.createDirectory(joined);
 			cache.add(joined);
 		}
 		return joined;
-	}, "");
+	}, '');
 }
 
 function rimraf(fs: FileSystem, path: string) {
 	if (fs.directoryExists(path)) {
-		for (const subPath of fs
-			.readDirectory(path)
-			.map((e) => join(path, e))) {
+		for (const subPath of fs.readDirectory(path).map(e => join(path, e))) {
 			rimraf(fs, subPath);
 		}
 	}
