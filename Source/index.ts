@@ -65,8 +65,10 @@ export class PackageManager {
 			await this.updateJson(join(root, "package.json"), opts);
 		}
 		console.time(`dependency resolution: ${root}`);
+
 		const maintainer = await this.resolveMaintainer(root, opts);
 		console.timeEnd(`dependency resolution: ${root}`);
+
 		return new ResolvedProject(this.fs, maintainer, root);
 	}
 
@@ -75,12 +77,15 @@ export class PackageManager {
 		opts: InstallProjectOpts = {},
 	) {
 		const packageType = opts.packageType ?? PackageType.Dependency;
+
 		const corgis = await Promise.all(
 			(opts.addPackages ?? []).map(async (pkg) =>
 				this.nassun.corgiMetadata(pkg),
 			),
 		);
+
 		let pkgJson;
+
 		try {
 			pkgJson = this.readJson(packageJsonPath);
 		} catch (e) {
@@ -116,10 +121,13 @@ export class PackageManager {
 			opts.pkgJson ||
 			this.fs.readFile(join(root, "package.json")) ||
 			"{}";
+
 		const kdlPkgLock =
 			opts.kdlLock || this.fs.readFile(join(root, "package-lock.kdl"));
+
 		const npmPkgLock =
 			opts.npmLock || this.fs.readFile(join(root, "package-lock.json"));
+
 		return resolveManifest(JSON.parse(pkgJson.trim()), {
 			kdlLock: kdlPkgLock,
 			npmLock: npmPkgLock,
@@ -133,6 +141,7 @@ export class PackageManager {
 	 */
 	private readJson(path: string): any {
 		const data = this.fs.readFile(path);
+
 		if (!data) {
 			throw new Error("Failed to read file: " + path);
 		}
@@ -174,9 +183,11 @@ export class ResolvedProject {
 	async restorePackageAt(path: string): Promise<number | undefined> {
 		console.time(`restore package at: ${path}`);
 		this.checkPath(path);
+
 		const meta: MetaFile = JSON.parse(
 			this.fs.readFile(this.metaPath) || "{}",
 		);
+
 		if (!meta.packages) {
 			meta.packages = {};
 		}
@@ -185,14 +196,18 @@ export class ResolvedProject {
 		if (!projRoot) {
 			console.error("root not found for ", path);
 			console.timeEnd(`restore package at: ${path}`);
+
 			return;
 		}
 
 		const pkgPath = packagePath(path);
+
 		const pkg = this.packageAtPath(path.slice(projRoot.length));
+
 		if (!pkg) {
 			console.error("no package at path", path, pkgPath);
 			console.timeEnd(`restore package at: ${path}`);
+
 			return;
 		}
 
@@ -204,12 +219,14 @@ export class ResolvedProject {
 		) {
 			// Already installed and synced. No need to do anything else!
 			console.timeEnd(`restore package at: ${path}`);
+
 			return;
 		} else {
 			rimraf(this.fs, pkgPath);
 		}
 
 		let count;
+
 		try {
 			// NB(zkat): load-bearing `await`. We need to await here because
 			// otherwise we'll have a use-after-free error when extracting the
@@ -222,6 +239,7 @@ export class ResolvedProject {
 		} catch (e) {
 			console.error("error extracting: ", e);
 			console.timeEnd(`restore package at: ${path}`);
+
 			throw e;
 		} finally {
 			pkg.free();
@@ -230,6 +248,7 @@ export class ResolvedProject {
 		this.fs.writeFile(this.metaPath, JSON.stringify(meta, null, 2));
 		this.writeLockfile();
 		console.timeEnd(`restore package at: ${path}`);
+
 		return count;
 	}
 
@@ -240,6 +259,7 @@ export class ResolvedProject {
 	 */
 	pruneExtraneous(): number {
 		const meta = JSON.parse(this.fs.readFile(this.metaPath) || "{}");
+
 		let count = 0;
 
 		if (!this.fs.directoryExists(this.prefix)) {
@@ -255,7 +275,9 @@ export class ResolvedProject {
 			// Only look at toplevel package paths.
 			if (pkgPath === entryPath) {
 				const subPath = pkgPath.slice(this.prefix.length);
+
 				const pkg = this.packageAtPath(subPath);
+
 				try {
 					if (
 						pkg &&
@@ -283,6 +305,7 @@ export class ResolvedProject {
 
 	private getProjectRoot(path: string): string | undefined {
 		const pkgPath = path.match(/(^.*\/)node_modules/);
+
 		return pkgPath?.[1];
 	}
 
@@ -310,10 +333,14 @@ export class ResolvedProject {
 			rimraf(this.fs, file);
 		}
 		const entries = <ReadableStream<Entry>>await pkg.entries();
+
 		const reader = entries.getReader();
+
 		let fileCount = 0;
+
 		while (true) {
 			const { done, value: entry } = await reader.read();
+
 			if (done) {
 				break;
 			}
@@ -363,6 +390,7 @@ export class ResolvedProject {
 					name: pkg.name,
 					resolved: pkg.resolved,
 				};
+
 				try {
 					if (!this.fs.directoryExists(fullPath)) {
 						await this.extractPackageTo(pkg, fullPath);
@@ -402,8 +430,11 @@ export function packagePath(path: string): string {
 // via https://stackoverflow.com/questions/12168909/blob-from-dataurl
 function dataURItoUint8Array(dataURI: string) {
 	const byteString = atob(dataURI.split(",")[1]);
+
 	const ab = new ArrayBuffer(byteString.length);
+
 	const ia = new Uint8Array(ab);
+
 	for (let i = 0; i < byteString.length; i++) {
 		ia[i] = byteString.charCodeAt(i);
 	}
@@ -412,9 +443,11 @@ function dataURItoUint8Array(dataURI: string) {
 
 async function drainStream(stream: ReadableStream<Uint8Array>): Promise<void> {
 	const reader = stream.getReader();
+
 	while (true) {
 		// eslint-disable-line no-constant-condition
 		const { done } = await reader.read();
+
 		if (done) {
 			break;
 		}
@@ -427,11 +460,15 @@ async function streamToArrayBuffer(
 	length: number,
 ): Promise<Uint8Array> {
 	const result = new Uint8Array(length);
+
 	const reader = stream.getReader();
+
 	let idx = 0;
+
 	while (true) {
 		// eslint-disable-line no-constant-condition
 		const { done, value } = await reader.read();
+
 		if (done) {
 			break;
 		}
@@ -443,9 +480,12 @@ async function streamToArrayBuffer(
 
 function* walkDir(fs: FileSystem, path: string) {
 	let contents = fs.readDirectory(path);
+
 	while (contents.length) {
 		const entry = contents.shift()!;
+
 		const entryPath = join(path, entry);
+
 		if (fs.directoryExists(entryPath)) {
 			contents = fs
 				.readDirectory(entryPath)
@@ -459,6 +499,7 @@ function* walkDir(fs: FileSystem, path: string) {
 function mkdirp(cache: Set<string>, fs: FileSystem, path: string) {
 	path.split("/").reduce((dir: string, next: string) => {
 		const joined = join(dir, next);
+
 		if (!cache.has(joined) && !fs.directoryExists(joined)) {
 			fs.createDirectory(joined);
 			cache.add(joined);
