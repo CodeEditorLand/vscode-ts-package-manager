@@ -19,10 +19,15 @@ const decoder = new TextDecoder();
 
 export interface InstallProjectOpts {
 	addPackages?: string[];
+
 	removePackages?: string[];
+
 	packageType?: PackageType;
+
 	pkgJson?: string;
+
 	npmLock?: string;
+
 	kdlLock?: string;
 }
 
@@ -42,10 +47,15 @@ export interface FileSystem {
 		include?: readonly string[],
 		depth?: number,
 	): string[];
+
 	deleteFile?(path: string): void;
+
 	createDirectory(path: string): void;
+
 	writeFile(path: string, data: string, writeByteOrderMark?: boolean): void;
+
 	directoryExists(path: string): boolean;
+
 	readFile(path: string, encoding?: string): string | undefined;
 }
 
@@ -64,9 +74,11 @@ export class PackageManager {
 		if (opts.addPackages || opts.removePackages) {
 			await this.updateJson(join(root, "package.json"), opts);
 		}
+
 		console.time(`dependency resolution: ${root}`);
 
 		const maintainer = await this.resolveMaintainer(root, opts);
+
 		console.timeEnd(`dependency resolution: ${root}`);
 
 		return new ResolvedProject(this.fs, maintainer, root);
@@ -90,13 +102,17 @@ export class PackageManager {
 			pkgJson = this.readJson(packageJsonPath);
 		} catch (e) {
 			console.error("failed to read package.json", e);
+
 			pkgJson = {};
 		}
 
 		for (const packageName of opts.removePackages ?? []) {
 			delete pkgJson.dependencies?.[packageName];
+
 			delete pkgJson.devDependencies?.[packageName];
+
 			delete pkgJson.optionalDependencies?.[packageName];
+
 			delete pkgJson.peerDependencies?.[packageName];
 		}
 
@@ -104,12 +120,14 @@ export class PackageManager {
 			if (!pkgJson[packageType]) {
 				pkgJson[packageType] = {};
 			}
+
 			if (corgi.name && corgi.version) {
 				pkgJson[packageType][corgi.name] = `^${corgi.version}`;
 			}
 		}
 
 		const stringified = JSON.stringify(pkgJson, undefined, 2);
+
 		this.fs.writeFile(packageJsonPath, stringified);
 	}
 
@@ -145,12 +163,14 @@ export class PackageManager {
 		if (!data) {
 			throw new Error("Failed to read file: " + path);
 		}
+
 		return JSON.parse(data.trim());
 	}
 }
 
 export class ResolvedProject {
 	private readonly prefix: string;
+
 	private readonly metaPath: string;
 
 	constructor(
@@ -159,6 +179,7 @@ export class ResolvedProject {
 		private readonly root: string,
 	) {
 		this.prefix = join(root, "node_modules");
+
 		this.metaPath = join(this.prefix, ".meta.json");
 	}
 
@@ -167,9 +188,13 @@ export class ResolvedProject {
 	 */
 	async restore() {
 		console.time(`project restore: ${this.root}`);
+
 		this.pruneExtraneous();
+
 		await this.extractMissing();
+
 		this.writeLockfile();
+
 		console.timeEnd(`project restore: ${this.root}`);
 	}
 
@@ -182,6 +207,7 @@ export class ResolvedProject {
 	 */
 	async restorePackageAt(path: string): Promise<number | undefined> {
 		console.time(`restore package at: ${path}`);
+
 		this.checkPath(path);
 
 		const meta: MetaFile = JSON.parse(
@@ -191,10 +217,12 @@ export class ResolvedProject {
 		if (!meta.packages) {
 			meta.packages = {};
 		}
+
 		const projRoot = this.getProjectRoot(path);
 
 		if (!projRoot) {
 			console.error("root not found for ", path);
+
 			console.timeEnd(`restore package at: ${path}`);
 
 			return;
@@ -206,6 +234,7 @@ export class ResolvedProject {
 
 		if (!pkg) {
 			console.error("no package at path", path, pkgPath);
+
 			console.timeEnd(`restore package at: ${path}`);
 
 			return;
@@ -232,21 +261,27 @@ export class ResolvedProject {
 			// otherwise we'll have a use-after-free error when extracting the
 			// package entries.
 			count = await this.extractPackageTo(pkg, pkgPath);
+
 			meta.packages[pkgPath.slice(this.prefix.length)] = {
 				name: pkg.name,
 				resolved: pkg.resolved,
 			};
 		} catch (e) {
 			console.error("error extracting: ", e);
+
 			console.timeEnd(`restore package at: ${path}`);
 
 			throw e;
 		} finally {
 			pkg.free();
 		}
+
 		rimraf(this.fs, this.metaPath);
+
 		this.fs.writeFile(this.metaPath, JSON.stringify(meta, null, 2));
+
 		this.writeLockfile();
+
 		console.timeEnd(`restore package at: ${path}`);
 
 		return count;
@@ -271,6 +306,7 @@ export class ResolvedProject {
 				// Leave the meta path alone.
 				continue;
 			}
+
 			const pkgPath = packagePath(entryPath);
 			// Only look at toplevel package paths.
 			if (pkgPath === entryPath) {
@@ -288,6 +324,7 @@ export class ResolvedProject {
 					} else {
 						// Extraneous!
 						count++;
+
 						rimraf(this.fs, entryPath);
 					}
 				} finally {
@@ -313,6 +350,7 @@ export class ResolvedProject {
 		if (!path.startsWith(this.root)) {
 			throw new Error(`Path ${path} is not in project root ${this.root}`);
 		}
+
 		if (!isAbsolute(path)) {
 			throw new Error(`Path ${path} is not absolute`);
 		}
@@ -323,6 +361,7 @@ export class ResolvedProject {
 		pkgPath: string,
 	): Promise<number | undefined> {
 		const mkdirCache = new Set<string>();
+
 		mkdirp(mkdirCache, this.fs, pkgPath);
 		// Clean up the directory, in case it already exists, but leave
 		// node_modules alone to avoid clobbering other packages.
@@ -330,8 +369,10 @@ export class ResolvedProject {
 			if (basename(file) === "node_modules") {
 				continue;
 			}
+
 			rimraf(this.fs, file);
 		}
+
 		const entries = <ReadableStream<Entry>>await pkg.entries();
 
 		const reader = entries.getReader();
@@ -361,6 +402,7 @@ export class ResolvedProject {
 			if (entry.type === 53) {
 				// '5' == 53 == directory
 				mkdirp(mkdirCache, this.fs, entryPath);
+
 				await drainStream(entry.contents);
 			} else if (entry.type === 0 || entry.type === 48) {
 				// '0' == 48 or '\x00' == 0 == regular file
@@ -368,7 +410,9 @@ export class ResolvedProject {
 					entry.contents,
 					entry.size,
 				);
+
 				this.fs.writeFile(entryPath, decoder.decode(data));
+
 				fileCount++;
 			} else {
 				// Anything else, we throw away, but we have to make sure to
@@ -383,9 +427,11 @@ export class ResolvedProject {
 
 	private async extractMissing() {
 		const meta: MetaFile = { packages: {} };
+
 		await this.maintainer.forEachPackage(
 			async (pkg: Package, path: string) => {
 				const fullPath = join(this.prefix, path);
+
 				meta.packages![path] = {
 					name: pkg.name,
 					resolved: pkg.resolved,
@@ -400,7 +446,9 @@ export class ResolvedProject {
 				}
 			},
 		);
+
 		rimraf(this.fs, this.metaPath);
+
 		this.fs.writeFile(this.metaPath, JSON.stringify(meta, null, 2));
 	}
 
@@ -438,6 +486,7 @@ function dataURItoUint8Array(dataURI: string) {
 	for (let i = 0; i < byteString.length; i++) {
 		ia[i] = byteString.charCodeAt(i);
 	}
+
 	return ia;
 }
 
@@ -452,6 +501,7 @@ async function drainStream(stream: ReadableStream<Uint8Array>): Promise<void> {
 			break;
 		}
 	}
+
 	return reader.closed;
 }
 
@@ -472,9 +522,12 @@ async function streamToArrayBuffer(
 		if (done) {
 			break;
 		}
+
 		result.set(value, idx);
+
 		idx += value.length;
 	}
+
 	return result;
 }
 
@@ -492,6 +545,7 @@ function* walkDir(fs: FileSystem, path: string) {
 				.map((e) => join(entry, e))
 				.concat(contents);
 		}
+
 		yield entryPath;
 	}
 }
@@ -502,8 +556,10 @@ function mkdirp(cache: Set<string>, fs: FileSystem, path: string) {
 
 		if (!cache.has(joined) && !fs.directoryExists(joined)) {
 			fs.createDirectory(joined);
+
 			cache.add(joined);
 		}
+
 		return joined;
 	}, "");
 }
@@ -516,6 +572,7 @@ function rimraf(fs: FileSystem, path: string) {
 			rimraf(fs, subPath);
 		}
 	}
+
 	try {
 		fs.deleteFile?.(path);
 	} catch (e) {
