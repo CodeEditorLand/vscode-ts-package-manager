@@ -3,7 +3,7 @@
 		"node-maintainer": "0.3.34"
 	},
 	"devDependencies": {
-		"@types/node": "22.10.0"
+		"@types/node": "22.10.1"
 	},
 	"files": [
 		"dist/**/*.js",
