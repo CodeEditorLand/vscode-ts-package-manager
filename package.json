@@ -10,7 +10,7 @@
 		"dist/**/*.d.ts"
 	],
 	"main": "dist/index.js",
-	"name": "@vscode/ts-package-manager",
+	"name": "@codeeditorland/ts-package-manager",
 	"scripts": {
 		"compile": "tsc -p tsconfig.json"
 	},
